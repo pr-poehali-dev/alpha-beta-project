@@ -373,7 +373,7 @@ export default function Index() {
           <p className="font-mono text-sm sm:text-base text-foreground/60 mt-6 max-w-[440px] mx-auto">
             Начинающая команда, пробивающаяся в HLTV & ESEA League
           </p>
-          <div className="flex gap-4 justify-center mt-10 flex-wrap">
+          <div className="flex gap-4 justify-center flex-wrap bg-transparent rounded-2xl py-[50px] my-0.5 px-[5px] mx-[500px]">
             <Button
               onClick={() => setSection("roster")}
               onMouseEnter={() => setHovering(true)}
