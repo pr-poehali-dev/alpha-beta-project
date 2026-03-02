@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "name": "GET all keys",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "POST save data",
+      "method": "POST",
+      "path": "/",
+      "body": {"key": "fc_test", "value": {"hello": "world"}},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET specific key",
+      "method": "GET",
+      "path": "/?key=fc_test",
+      "expectedStatus": 200,
+      "expectedBody": {"key": "fc_test"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

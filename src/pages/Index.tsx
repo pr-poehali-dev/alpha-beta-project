@@ -154,18 +154,28 @@ const defaultAchievements: Achievement[] = [
   { id: 2, title: "MintexTournament", place: "🥇 1 место", date: "2025-03" },
 ];
 
-function loadFromStorage<T>(key: string, fallback: T): T {
+const API_URL = "https://functions.poehali.dev/492375b1-6334-41df-96a8-a0657de17d86";
+
+async function loadAllFromServer(): Promise<Record<string, unknown>> {
   try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw) as T;
-  } catch (e) {
-    console.warn("loadFromStorage error", e);
+    const res = await fetch(API_URL);
+    if (!res.ok) return {};
+    return await res.json();
+  } catch {
+    return {};
   }
-  return fallback;
 }
 
-function saveToStorage<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
+async function saveToServer(key: string, value: unknown) {
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value }),
+    });
+  } catch {
+    // fallback silent
+  }
 }
 
 function calcHLTV(player: Player): string {
@@ -191,17 +201,29 @@ export default function Index() {
   const [hovering, setHovering] = useState(false);
   const [section, setSection] = useState<Section>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [players, setPlayers] = useState<Player[]>(() => loadFromStorage("fc_players", defaultPlayers));
-  const [matches, setMatches] = useState<Match[]>(() => loadFromStorage("fc_matches", defaultMatches));
-  const [news, setNews] = useState<NewsItem[]>(() => loadFromStorage("fc_news", defaultNews));
-  const [achievements, setAchievements] = useState<Achievement[]>(() => loadFromStorage("fc_achievements", defaultAchievements));
-  const [aboutText, setAboutText] = useState<string>(() => loadFromStorage("fc_about", ""));
+  const [loaded, setLoaded] = useState(false);
+  const [players, setPlayers] = useState<Player[]>(defaultPlayers);
+  const [matches, setMatches] = useState<Match[]>(defaultMatches);
+  const [news, setNews] = useState<NewsItem[]>(defaultNews);
+  const [achievements, setAchievements] = useState<Achievement[]>(defaultAchievements);
+  const [aboutText, setAboutText] = useState<string>("");
 
-  useEffect(() => { saveToStorage("fc_players", players); }, [players]);
-  useEffect(() => { saveToStorage("fc_matches", matches); }, [matches]);
-  useEffect(() => { saveToStorage("fc_news", news); }, [news]);
-  useEffect(() => { saveToStorage("fc_achievements", achievements); }, [achievements]);
-  useEffect(() => { saveToStorage("fc_about", aboutText); }, [aboutText]);
+  useEffect(() => {
+    loadAllFromServer().then((data) => {
+      if (data["fc_players"]) setPlayers(data["fc_players"] as Player[]);
+      if (data["fc_matches"]) setMatches(data["fc_matches"] as Match[]);
+      if (data["fc_news"]) setNews(data["fc_news"] as NewsItem[]);
+      if (data["fc_achievements"]) setAchievements(data["fc_achievements"] as Achievement[]);
+      if (data["fc_about"] !== undefined) setAboutText(data["fc_about"] as string);
+      setLoaded(true);
+    });
+  }, []);
+
+  useEffect(() => { if (loaded) saveToServer("fc_players", players); }, [players]);
+  useEffect(() => { if (loaded) saveToServer("fc_matches", matches); }, [matches]);
+  useEffect(() => { if (loaded) saveToServer("fc_news", news); }, [news]);
+  useEffect(() => { if (loaded) saveToServer("fc_achievements", achievements); }, [achievements]);
+  useEffect(() => { if (loaded) saveToServer("fc_about", aboutText); }, [aboutText]);
 
   // Admin
   const [adminOpen, setAdminOpen] = useState(false);
