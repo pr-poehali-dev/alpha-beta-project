@@ -1,6 +1,6 @@
 import { GL } from "@/components/gl";
 import { Header } from "@/components/Header";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,8 @@ interface Achievement {
   date: string;
 }
 
+const AVATAR = "https://cdn.poehali.dev/projects/9dc15c8b-2775-4ce0-bc53-7a3627cf4cf2/bucket/fa27ae37-caa0-4fb7-90a9-b305c0169b9b.jpg";
+
 const defaultPlayers: Player[] = [
   {
     id: 1,
@@ -52,7 +54,7 @@ const defaultPlayers: Player[] = [
     role: "Star Player",
     faceitLvl: 10,
     hltvRating: 1.0,
-    avatar: "https://cdn.poehali.dev/projects/9dc15c8b-2775-4ce0-bc53-7a3627cf4cf2/files/d7623f7e-9018-4075-9ee7-01751d1623bd.jpg",
+    avatar: AVATAR,
     nominations: ["MVP", "Best Entry Fragger"],
     kills: 0,
     deaths: 0,
@@ -65,7 +67,7 @@ const defaultPlayers: Player[] = [
     role: "AWP",
     faceitLvl: 7,
     hltvRating: 1.0,
-    avatar: "https://cdn.poehali.dev/projects/9dc15c8b-2775-4ce0-bc53-7a3627cf4cf2/files/6b310442-396b-45e2-a592-31d576b7fdae.jpg",
+    avatar: AVATAR,
     nominations: ["Best AWPer"],
     kills: 0,
     deaths: 0,
@@ -78,7 +80,7 @@ const defaultPlayers: Player[] = [
     role: "IGL",
     faceitLvl: 5,
     hltvRating: 1.0,
-    avatar: "https://cdn.poehali.dev/projects/9dc15c8b-2775-4ce0-bc53-7a3627cf4cf2/files/404824c1-f38e-46df-a5a7-2f465d21d4c7.jpg",
+    avatar: AVATAR,
     nominations: ["Best IGL", "MVP"],
     kills: 0,
     deaths: 0,
@@ -91,7 +93,7 @@ const defaultPlayers: Player[] = [
     role: "Rifler",
     faceitLvl: 5,
     hltvRating: 1.0,
-    avatar: "https://cdn.poehali.dev/projects/9dc15c8b-2775-4ce0-bc53-7a3627cf4cf2/files/406a1768-e74f-40b7-9bc5-c0df4410e081.jpg",
+    avatar: AVATAR,
     nominations: ["EVP", "Most Improved"],
     kills: 0,
     deaths: 0,
@@ -104,7 +106,7 @@ const defaultPlayers: Player[] = [
     role: "Support",
     faceitLvl: 7,
     hltvRating: 1.0,
-    avatar: "https://cdn.poehali.dev/projects/9dc15c8b-2775-4ce0-bc53-7a3627cf4cf2/files/4a1fac53-2710-43c0-b9a1-db21910167ff.jpg",
+    avatar: AVATAR,
     nominations: ["Best Support", "Team Player"],
     kills: 0,
     deaths: 0,
@@ -152,6 +154,20 @@ const defaultAchievements: Achievement[] = [
   { id: 2, title: "MintexTournament", place: "🥇 1 место", date: "2025-03" },
 ];
 
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as T;
+  } catch (e) {
+    console.warn("loadFromStorage error", e);
+  }
+  return fallback;
+}
+
+function saveToStorage<T>(key: string, value: T) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
 function calcHLTV(player: Player): string {
   if (player.matchesPlayed === 0 || player.deaths === 0) return "1.00";
   const kpr = player.kills / player.matchesPlayed;
@@ -175,17 +191,24 @@ export default function Index() {
   const [hovering, setHovering] = useState(false);
   const [section, setSection] = useState<Section>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [players, setPlayers] = useState<Player[]>(defaultPlayers);
-  const [matches, setMatches] = useState<Match[]>(defaultMatches);
-  const [news, setNews] = useState<NewsItem[]>(defaultNews);
-  const [achievements, setAchievements] = useState<Achievement[]>(defaultAchievements);
+  const [players, setPlayers] = useState<Player[]>(() => loadFromStorage("fc_players", defaultPlayers));
+  const [matches, setMatches] = useState<Match[]>(() => loadFromStorage("fc_matches", defaultMatches));
+  const [news, setNews] = useState<NewsItem[]>(() => loadFromStorage("fc_news", defaultNews));
+  const [achievements, setAchievements] = useState<Achievement[]>(() => loadFromStorage("fc_achievements", defaultAchievements));
+  const [aboutText, setAboutText] = useState<string>(() => loadFromStorage("fc_about", ""));
+
+  useEffect(() => { saveToStorage("fc_players", players); }, [players]);
+  useEffect(() => { saveToStorage("fc_matches", matches); }, [matches]);
+  useEffect(() => { saveToStorage("fc_news", news); }, [news]);
+  useEffect(() => { saveToStorage("fc_achievements", achievements); }, [achievements]);
+  useEffect(() => { saveToStorage("fc_about", aboutText); }, [aboutText]);
 
   // Admin
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminInput, setAdminInput] = useState("");
   const [adminAuth, setAdminAuth] = useState(false);
   const [adminError, setAdminError] = useState("");
-  const [adminTab, setAdminTab] = useState<"matches" | "news" | "achievements" | "players">("matches");
+  const [adminTab, setAdminTab] = useState<"matches" | "news" | "achievements" | "players" | "about">("matches");
 
   // Match form
   const [newMatch, setNewMatch] = useState({ opponent: "", score: "", result: "win" as Match["result"], date: "", map: "" });
@@ -490,21 +513,20 @@ export default function Index() {
               <h2 className="text-3xl font-sentient mb-2">О клубе</h2>
               <p className="font-mono text-xs text-foreground/40 mb-10 uppercase tracking-widest">Five Cutlass Esports</p>
               <div className="border border-foreground/20 bg-black/40 backdrop-blur-sm p-8 mb-8">
-                <p className="font-mono text-sm text-foreground/70 leading-relaxed mb-4">
-                  Мы — начинающая команда <span className="text-white font-bold">Five Cutlass</span>, будем пробиваться в{" "}
-                  <span className="text-primary">HLTV</span> and <span className="text-primary">ESEA LEAGUE</span>. Сейчас мы тренируемся, чтобы стать сильнее.
+                <p className="font-mono text-sm text-foreground/70 leading-relaxed whitespace-pre-wrap">
+                  {aboutText || "Мы — начинающая команда Five Cutlass, будем пробиваться в HLTV and ESEA LEAGUE. Сейчас мы тренируемся, чтобы стать сильнее."}
                 </p>
               </div>
               <h3 className="font-sentient text-lg mb-4 text-white">Результаты матчей</h3>
               <div className="flex flex-col gap-3">
-                <div className="border-l-4 border-green-500 bg-black/40 p-4 font-mono text-sm">
-                  <span className="text-white font-bold">Five Cutlass vs No Name</span>
-                  <span className="text-green-400 ml-3">13:7 — Победа наша</span>
-                </div>
-                <div className="border-l-4 border-green-500 bg-black/40 p-4 font-mono text-sm">
-                  <span className="text-white font-bold">Five Cutlass vs Sigma Junior</span>
-                  <span className="text-green-400 ml-3">2:0 — Победа наша</span>
-                </div>
+                {matches.map((m) => (
+                  <div key={m.id} className={`border-l-4 ${m.result === "win" ? "border-green-500" : m.result === "loss" ? "border-red-500" : "border-yellow-500"} bg-black/40 p-4 font-mono text-sm`}>
+                    <span className="text-white font-bold">Five Cutlass vs {m.opponent}</span>
+                    <span className={`ml-3 ${m.result === "win" ? "text-green-400" : m.result === "loss" ? "text-red-400" : "text-yellow-400"}`}>
+                      {m.score} — {m.result === "win" ? "Победа наша" : m.result === "loss" ? "Поражение" : "Ничья"}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -593,7 +615,7 @@ export default function Index() {
             <div>
               {/* Tabs */}
               <div className="flex gap-2 mb-6 flex-wrap">
-                {(["matches", "news", "achievements", "players"] as const).map((t) => (
+                {(["matches", "news", "achievements", "players", "about"] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setAdminTab(t)}
@@ -601,7 +623,7 @@ export default function Index() {
                       adminTab === t ? "border-primary text-primary" : "border-foreground/20 text-foreground/40 hover:border-foreground/40"
                     }`}
                   >
-                    {t === "matches" ? "Матчи" : t === "news" ? "Новости" : t === "achievements" ? "Достижения" : "Игроки"}
+                    {t === "matches" ? "Матчи" : t === "news" ? "Новости" : t === "achievements" ? "Достижения" : t === "players" ? "Игроки" : "О клубе"}
                   </button>
                 ))}
               </div>
@@ -665,6 +687,20 @@ export default function Index() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* About */}
+              {adminTab === "about" && (
+                <div className="space-y-4">
+                  <p className="font-mono text-xs text-foreground/40">Текст раздела «О клубе»</p>
+                  <textarea
+                    className="admin-input min-h-[140px] resize-none"
+                    placeholder="Напишите о вашем клубе..."
+                    value={aboutText}
+                    onChange={(e) => setAboutText(e.target.value)}
+                  />
+                  <p className="font-mono text-[10px] text-green-400/60">Изменения сохраняются автоматически</p>
                 </div>
               )}
 
